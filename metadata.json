@@ -1,0 +1,6 @@
+{
+  "name": "NOVA AI FILM",
+  "description": "Studio professionnel de pré-production cinématographique et d'architecture IA pour écrire un scénario, créer des personnages, découper les scènes et préparer le pipeline vidéo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

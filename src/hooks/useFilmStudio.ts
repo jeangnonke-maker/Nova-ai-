@@ -1,9 +1,78 @@
 import { useCallback, useEffect, useState } from 'react';
 import { STARTER_PROJECTS } from '../data/starterProjects';
 import type { FilmProject, PipelineStatusResponse } from '../types/film';
+import { fetchApiJson } from '../utils/apiClient';
 
 const STORAGE_KEY_PROJECTS = 'nova_ai_film_projects_v1';
 const STORAGE_KEY_ACTIVE_ID = 'nova_ai_film_active_id_v1';
+
+function buildStaticHostingStatus(): PipelineStatusResponse {
+  return {
+    checkedAt: new Date().toISOString(),
+    connectors: [
+      {
+        id: 'gemini-text',
+        name: 'Google Gemini (Scénario)',
+        provider: 'Google AI Studio',
+        stage: 'Analyse & Écriture',
+        configured: false,
+        requirementLabel: 'Serveur Node.js requis (mode statique actif)',
+        modelOrEngine: 'gemini-4-hydrogen',
+        endpointPath: '/api/connectors/gemini/test',
+        capabilities: [
+          'Rédaction complète et export .fountain 100 % actifs dans le navigateur',
+          'Analyse dramaturgique IA disponible avec le serveur Node.js',
+        ],
+        blockedFeatures: ['Analyse IA côté serveur'],
+      },
+      {
+        id: 'gemini-image',
+        name: 'Gemini Images (Storyboard)',
+        provider: 'Google AI Studio',
+        stage: 'Série d’images par plan',
+        configured: false,
+        requirementLabel: 'Import d’images locales actif · Gemini requiert serveur Node.js',
+        modelOrEngine: 'gemini-3.1-flash-lite-image',
+        endpointPath: '/api/connectors/gemini/generate-shot-image',
+        capabilities: [
+          'Import et recadrage d’images locales fonctionnels dans le navigateur',
+          'Génération IA par plan active avec le backend AI Studio',
+        ],
+        blockedFeatures: ['Génération IA par plan'],
+      },
+      {
+        id: 'gemini-tts',
+        name: 'Gemini Voix (Dialogues)',
+        provider: 'Google AI Studio',
+        stage: 'Synthèse vocale gratuite',
+        configured: false,
+        requirementLabel: 'Serveur Node.js requis (mode statique actif)',
+        modelOrEngine: 'gemini-3.8-flash-lite-tts',
+        endpointPath: '/api/connectors/gemini/generate-dialogue-audio',
+        capabilities: [
+          'Préparation et annotation des répliques disponibles hors ligne',
+          'Synthèse vocale WAV active avec le backend Node.js',
+        ],
+        blockedFeatures: ['Synthèse vocale serveur'],
+      },
+      {
+        id: 'ffmpeg',
+        name: 'FFmpeg Diaporama MP4',
+        provider: 'Moteur média serveur',
+        stage: 'Transitions, Texte & Musique',
+        configured: false,
+        requirementLabel: 'Binaire serveur requis · Manifeste JSON prêt dans le navigateur',
+        modelOrEngine: 'libx264 · xfade · drawtext · aac',
+        endpointPath: '/api/slideshow/render',
+        capabilities: [
+          'Compilation et téléchargement du manifeste FFmpeg 100 % actifs',
+          'Encodage MP4 automatique actif avec le serveur Node.js + FFmpeg',
+        ],
+        blockedFeatures: ['Encodage MP4 serveur'],
+      },
+    ],
+  };
+}
 
 function migrateProjectShape(raw: FilmProject): FilmProject {
   return {
@@ -69,6 +138,7 @@ export function useFilmStudio() {
   const [pipelineStatus, setPipelineStatus] = useState<PipelineStatusResponse | null>(null);
   const [statusLoading, setStatusLoading] = useState<boolean>(true);
   const [statusError, setStatusError] = useState<string | null>(null);
+  const [isStaticMode, setIsStaticMode] = useState<boolean>(false);
 
   useEffect(() => {
     try {
@@ -92,22 +162,18 @@ export function useFilmStudio() {
   const refreshPipelineStatus = useCallback(async () => {
     setStatusLoading(true);
     setStatusError(null);
-    try {
-      const response = await fetch('/api/pipeline/status');
-      if (!response.ok) {
-        throw new Error(`Statut HTTP ${response.status}`);
-      }
-      const data = (await response.json()) as PipelineStatusResponse;
-      setPipelineStatus(data);
-    } catch (err) {
-      setStatusError(
-        err instanceof Error
-          ? err.message
-          : 'Impossible de joindre le serveur studio.',
-      );
-    } finally {
-      setStatusLoading(false);
+    const res = await fetchApiJson<PipelineStatusResponse>('/api/pipeline/status');
+    if (res.ok && res.data) {
+      setIsStaticMode(false);
+      setPipelineStatus(res.data);
+    } else if (res.isStaticHosting) {
+      setIsStaticMode(true);
+      setPipelineStatus(buildStaticHostingStatus());
+    } else {
+      setIsStaticMode(false);
+      setStatusError(res.errorMessage || 'Impossible de joindre le serveur studio.');
     }
+    setStatusLoading(false);
   }, []);
 
   useEffect(() => {
@@ -174,6 +240,7 @@ export function useFilmStudio() {
     pipelineStatus,
     statusLoading,
     statusError,
+    isStaticMode,
     refreshPipelineStatus,
   };
 }

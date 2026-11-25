@@ -19,6 +19,7 @@ import type {
   ScriptBlockType,
   TimeOfDay,
 } from '../types/film';
+import { fetchApiJson } from '../utils/apiClient';
 import {
   computeSceneDurationSec,
   downloadTextFile,
@@ -191,8 +192,9 @@ export function ScreenplayEditorView({
   const handleAnalyzeSceneWithGemini = async () => {
     if (!activeScene) return;
     setGeminiState({ loading: true, result: null, apiNotice: null });
-    try {
-      const res = await fetch('/api/connectors/gemini/analyze-scene', {
+    const res = await fetchApiJson<{ analysisText?: string; message?: string }>(
+      '/api/connectors/gemini/analyze-scene',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -200,30 +202,25 @@ export function ScreenplayEditorView({
           visualStyle: project.visualStyle,
           scene: activeScene,
         }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setGeminiState({
-          loading: false,
-          result: null,
-          apiNotice:
-            data.message ||
-            "Connexion API Google Gemini requise pour analyser la scène.",
-        });
-        return;
-      }
-      setGeminiState({
-        loading: false,
-        result: data.analysisText,
-        apiNotice: null,
-      });
-    } catch {
+      },
+    );
+
+    if (!res.ok || !res.data?.analysisText) {
       setGeminiState({
         loading: false,
         result: null,
-        apiNotice: 'Impossible de joindre le connecteur serveur Gemini.',
+        apiNotice:
+          res.errorMessage ||
+          'Connexion API Google Gemini requise pour analyser la scène.',
       });
+      return;
     }
+
+    setGeminiState({
+      loading: false,
+      result: res.data.analysisText,
+      apiNotice: null,
+    });
   };
 
   const handleExportFountain = () => {
@@ -232,9 +229,9 @@ export function ScreenplayEditorView({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
       {/* Left Scene Navigator */}
-      <aside className="lg:col-span-4 xl:col-span-3 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden">
+      <aside className="lg:col-span-4 xl:col-span-3 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden min-w-0">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10">
           <h2 className="text-sm font-semibold text-zinc-100">
             Scènes ({project.scenes.length})
@@ -316,7 +313,7 @@ export function ScreenplayEditorView({
       </aside>
 
       {/* Main Screenplay Editor */}
-      <div className="lg:col-span-8 xl:col-span-9 space-y-4">
+      <div className="lg:col-span-8 xl:col-span-9 space-y-4 min-w-0">
         {/* Top Action Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-[#11131C] rounded-xl px-4 py-3">
           <div className="flex items-center gap-1 p-1 bg-[#090A0F] border border-white/10 rounded-lg">
@@ -418,7 +415,7 @@ export function ScreenplayEditorView({
           </div>
         ) : viewMode === 'preview' ? (
           /* Authentic Fountain-style Screenplay Page Preview */
-          <div className="border border-white/10 bg-[#151722] rounded-xl p-6 sm:p-10 font-mono text-sm text-zinc-100 max-w-4xl mx-auto">
+          <div className="border border-white/10 bg-[#151722] rounded-xl p-4 sm:p-8 lg:p-10 font-mono text-sm text-zinc-100 max-w-4xl mx-auto break-words">
             <div className="mb-8 pb-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-400">
               <span>{project.title.toUpperCase()}</span>
               <span className="tabular-nums">

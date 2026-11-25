@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Clapperboard, User } from 'lucide-react';
 
 interface CinemaImageProps {
@@ -17,6 +17,10 @@ export function CinemaImage({
   className = '',
 }: CinemaImageProps) {
   const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
 
   if (!src || hasError) {
     return (

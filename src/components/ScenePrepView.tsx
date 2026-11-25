@@ -22,6 +22,7 @@ import type {
   SlideshowRenderResult,
   SlideshowTransition,
 } from '../types/film';
+import { fetchApiJson } from '../utils/apiClient';
 import {
   buildDefaultImagePrompt,
   computeSceneDurationSec,
@@ -159,8 +160,9 @@ export function ScenePrepView({
     setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: true }));
     setNotice(null);
 
-    try {
-      const res = await fetch('/api/connectors/gemini/generate-shot-image', {
+    const res = await fetchApiJson<{ imageUrl?: string; model?: string }>(
+      '/api/connectors/gemini/generate-shot-image',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -168,38 +170,31 @@ export function ScenePrepView({
           aspectRatio: project.aspectRatio,
           shotId: shot.id,
         }),
-      });
-      const data = await res.json();
+      },
+    );
 
-      if (!res.ok || !data.imageUrl) {
-        setNotice({
-          type: 'error',
-          title: `Plan ${String(shot.number).padStart(2, '0')} — Génération d'image Gemini`,
-          message:
-            data.message ||
-            "Impossible de générer l'image avec Gemini. Vous pouvez importer une image locale pour ce plan.",
-        });
-        return;
-      }
-
-      handleUpdateShot(shot.id, {
-        generatedImageUrl: data.imageUrl,
-        imagePrompt: prompt,
-      });
-      setNotice({
-        type: 'success',
-        title: `Plan ${String(shot.number).padStart(2, '0')} — Image storyboard prête`,
-        message: `Image générée via ${data.model} et ajoutée au diaporama.`,
-      });
-    } catch {
+    if (!res.ok || !res.data?.imageUrl) {
       setNotice({
         type: 'error',
-        title: 'Erreur réseau',
-        message: 'Impossible de joindre le serveur studio.',
+        title: `Plan ${String(shot.number).padStart(2, '0')} — Génération d'image Gemini`,
+        message:
+          res.errorMessage ||
+          "Impossible de générer l'image avec Gemini. Vous pouvez importer une image locale pour ce plan.",
       });
-    } finally {
       setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: false }));
+      return;
     }
+
+    handleUpdateShot(shot.id, {
+      generatedImageUrl: res.data.imageUrl,
+      imagePrompt: prompt,
+    });
+    setNotice({
+      type: 'success',
+      title: `Plan ${String(shot.number).padStart(2, '0')} — Image storyboard prête`,
+      message: `Image générée via ${res.data.model || 'Gemini'} et ajoutée au diaporama.`,
+    });
+    setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: false }));
   };
 
   const handleGenerateAllImages = async () => {
@@ -211,8 +206,9 @@ export function ScenePrepView({
     for (const shot of activeScene.shots) {
       const prompt = shot.imagePrompt.trim() || getComposedPrompt(shot);
       setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: true }));
-      try {
-        const res = await fetch('/api/connectors/gemini/generate-shot-image', {
+      const res = await fetchApiJson<{ imageUrl?: string }>(
+        '/api/connectors/gemini/generate-shot-image',
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -220,26 +216,23 @@ export function ScenePrepView({
             aspectRatio: project.aspectRatio,
             shotId: shot.id,
           }),
+        },
+      );
+
+      if (res.ok && res.data?.imageUrl) {
+        handleUpdateShot(shot.id, {
+          generatedImageUrl: res.data.imageUrl,
+          imagePrompt: prompt,
         });
-        const data = await res.json();
-        if (res.ok && data.imageUrl) {
-          handleUpdateShot(shot.id, {
-            generatedImageUrl: data.imageUrl,
-            imagePrompt: prompt,
-          });
-          generatedCount += 1;
-        } else {
-          setNotice({
-            type: 'error',
-            title: `Plan ${String(shot.number).padStart(2, '0')} interrompu`,
-            message:
-              data.message ||
-              "Quota d'images Gemini indisponible sur cette clé. Utilisez l'import d'images ou les visuels du projet pour assembler votre diaporama.",
-          });
-          setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: false }));
-          break;
-        }
-      } catch {
+        generatedCount += 1;
+      } else {
+        setNotice({
+          type: 'error',
+          title: `Plan ${String(shot.number).padStart(2, '0')} interrompu`,
+          message:
+            res.errorMessage ||
+            "Quota d'images Gemini indisponible sur cette clé. Utilisez l'import d'images ou les visuels du projet pour assembler votre diaporama.",
+        });
         setGeneratingShotIds((prev) => ({ ...prev, [shot.id]: false }));
         break;
       }
@@ -264,14 +257,14 @@ export function ScenePrepView({
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
-        const maxW = 1280;
+        const maxW = 960;
         const scale = Math.min(1, maxW / img.width);
         canvas.width = Math.round(img.width * scale);
         canvas.height = Math.round(img.height * scale);
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
           handleUpdateShot(shotId, { generatedImageUrl: dataUrl });
         }
       };
@@ -294,8 +287,9 @@ export function ScenePrepView({
     setGeneratingAudioIds((prev) => ({ ...prev, [blockId]: true }));
     setNotice(null);
 
-    try {
-      const res = await fetch('/api/connectors/gemini/generate-dialogue-audio', {
+    const res = await fetchApiJson<{ audioUrl?: string }>(
+      '/api/connectors/gemini/generate-dialogue-audio',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -304,39 +298,32 @@ export function ScenePrepView({
           styleDirective: block.voiceEmotion || char?.voiceProfile.defaultEmotion || '',
           blockId: block.id,
         }),
-      });
-      const data = await res.json();
+      },
+    );
 
-      if (!res.ok || !data.audioUrl) {
-        setNotice({
-          type: 'error',
-          title: 'Synthèse vocale Gemini TTS',
-          message:
-            data.message || 'Impossible de générer la voix pour cette réplique.',
-        });
-        return;
-      }
-
-      updateActiveScene((scene) => ({
-        ...scene,
-        blocks: scene.blocks.map((b) =>
-          b.id === blockId ? { ...b, generatedAudioUrl: data.audioUrl } : b,
-        ),
-      }));
-      setNotice({
-        type: 'success',
-        title: 'Voix générée avec Gemini TTS',
-        message: 'Piste audio WAV prête et prête à être mixée dans le diaporama.',
-      });
-    } catch {
+    if (!res.ok || !res.data?.audioUrl) {
       setNotice({
         type: 'error',
-        title: 'Erreur réseau',
-        message: 'Impossible de joindre le serveur studio.',
+        title: 'Synthèse vocale Gemini TTS',
+        message:
+          res.errorMessage || 'Impossible de générer la voix pour cette réplique.',
       });
-    } finally {
       setGeneratingAudioIds((prev) => ({ ...prev, [blockId]: false }));
+      return;
     }
+
+    updateActiveScene((scene) => ({
+      ...scene,
+      blocks: scene.blocks.map((b) =>
+        b.id === blockId ? { ...b, generatedAudioUrl: res.data!.audioUrl } : b,
+      ),
+    }));
+    setNotice({
+      type: 'success',
+      title: 'Voix générée avec Gemini TTS',
+      message: 'Piste audio WAV prête et prête à être mixée dans le diaporama.',
+    });
+    setGeneratingAudioIds((prev) => ({ ...prev, [blockId]: false }));
   };
 
   const handleRenderSlideshow = async () => {
@@ -376,46 +363,38 @@ export function ScenePrepView({
     setRenderingVideo(true);
     setNotice(null);
 
-    try {
-      const res = await fetch('/api/slideshow/render', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectTitle: project.title,
-          aspectRatio: project.aspectRatio,
-          fps: project.fps,
-          transition,
-          musicMood,
-          showTextOverlay,
-          slides,
-        }),
-      });
-      const data = await res.json();
+    const res = await fetchApiJson<SlideshowRenderResult>('/api/slideshow/render', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectTitle: project.title,
+        aspectRatio: project.aspectRatio,
+        fps: project.fps,
+        transition,
+        musicMood,
+        showTextOverlay,
+        slides,
+      }),
+    });
 
-      if (!res.ok || !data.videoUrl) {
-        setNotice({
-          type: 'error',
-          title: 'Échec de l’assemblage FFmpeg',
-          message: data.error || 'Erreur lors de la création de la vidéo diaporama.',
-        });
-        return;
-      }
-
-      setRenderedVideo(data as SlideshowRenderResult);
-      setNotice({
-        type: 'success',
-        title: 'Vidéo diaporama assemblée',
-        message: `MP4 généré (${data.slideCount} plans · ${data.durationSec}s) avec transitions, texte et musique.`,
-      });
-    } catch {
+    if (!res.ok || !res.data?.videoUrl) {
       setNotice({
         type: 'error',
-        title: 'Erreur serveur',
-        message: 'Impossible de joindre le moteur FFmpeg.',
+        title: 'Assemblage diaporama MP4',
+        message:
+          res.errorMessage || 'Erreur lors de la création de la vidéo diaporama.',
       });
-    } finally {
       setRenderingVideo(false);
+      return;
     }
+
+    setRenderedVideo(res.data);
+    setNotice({
+      type: 'success',
+      title: 'Vidéo diaporama assemblée',
+      message: `MP4 généré (${res.data.slideCount} plans · ${res.data.durationSec}s) avec transitions, texte et musique.`,
+    });
+    setRenderingVideo(false);
   };
 
   if (!activeScene) {
@@ -435,10 +414,10 @@ export function ScenePrepView({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-w-0">
       {/* Scene Switcher Strip */}
-      <div className="border border-white/10 bg-[#11131C] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
+      <div className="border border-white/10 bg-[#11131C] rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
           <label htmlFor="prep-scene-select" className="text-xs font-medium text-zinc-400 shrink-0">
             Scène active :
           </label>
@@ -449,7 +428,7 @@ export function ScenePrepView({
               setSelectedSceneId(e.target.value);
               setNotice(null);
             }}
-            className="px-3 py-2 bg-[#090A0F] border border-white/10 rounded-lg text-sm font-mono text-zinc-100 focus:outline-none focus:border-amber-500 max-w-full"
+            className="w-full min-w-0 px-3 py-2 bg-[#090A0F] border border-white/10 rounded-lg text-sm font-mono text-zinc-100 focus:outline-none focus:border-amber-500 truncate"
           >
             {project.scenes.map((scene) => (
               <option key={scene.id} value={scene.id}>
@@ -915,9 +894,9 @@ export function ScenePrepView({
 
       {/* TAB 3: FFMPEG SLIDESHOW VIDEO ASSEMBLY */}
       {prepTab === 'timeline' && (
-        <div className="border border-white/10 bg-[#11131C] rounded-xl p-6 space-y-6">
+        <div className="border border-white/10 bg-[#11131C] rounded-xl p-4 sm:p-6 space-y-6 min-w-0 overflow-hidden">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-white/10 pb-4">
-            <div>
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-zinc-100">
                 Assemblage Diaporama Vidéo (FFmpeg 100 % gratuit)
               </h3>
@@ -929,7 +908,7 @@ export function ScenePrepView({
               type="button"
               disabled={renderingVideo || readySlidesCount === 0}
               onClick={handleRenderSlideshow}
-              className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-semibold text-zinc-950 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors whitespace-nowrap shrink-0 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 text-xs font-semibold text-zinc-950 bg-amber-500 hover:bg-amber-400 rounded-lg transition-colors whitespace-nowrap shrink-0 disabled:opacity-50"
             >
               <Film className="w-4 h-4" />
               {renderingVideo
@@ -991,7 +970,7 @@ export function ScenePrepView({
           </div>
 
           {/* Visual Slide Track */}
-          <div className="space-y-2">
+          <div className="space-y-2 min-w-0">
             <p className="text-xs font-medium text-zinc-400">
               Séquence des images sélectionnées ({readySlidesCount} prêtes) :
             </p>
@@ -1000,7 +979,7 @@ export function ScenePrepView({
                 Aucune image prête dans cette sélection. Générez ou importez des images dans l’onglet « Plans & Images ».
               </div>
             ) : (
-              <div className="flex items-stretch gap-3 overflow-x-auto pb-2">
+              <div className="flex items-stretch gap-3 overflow-x-auto pb-2 max-w-full">
                 {(includeAllScenes ? project.scenes : [activeScene]).flatMap((sc) =>
                   sc.shots
                     .filter((sh) => Boolean(sh.generatedImageUrl))

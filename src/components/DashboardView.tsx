@@ -67,8 +67,8 @@ export function DashboardView({
   return (
     <div className="space-y-8">
       {/* Active Project Spotlight */}
-      <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
-        <div className="lg:col-span-7 relative rounded-xl overflow-hidden border border-white/10 bg-[#11131C] min-h-[260px] lg:min-h-[320px]">
+      <section className="grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-stretch">
+        <div className="lg:col-span-7 relative rounded-xl overflow-hidden border border-white/10 bg-[#11131C] min-h-[260px] lg:min-h-[320px] min-w-0">
           <CinemaImage
             src={project.coverImage}
             alt={`Photogramme de référence pour ${project.title}`}
@@ -76,7 +76,7 @@ export function DashboardView({
             className="w-full h-full object-cover absolute inset-0"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-[#090A0F] via-[#090A0F]/65 to-transparent" />
-          <div className="relative z-10 h-full flex flex-col justify-end p-6 sm:p-8">
+          <div className="relative z-10 h-full flex flex-col justify-end p-5 sm:p-8">
             <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-300 mb-2">
               <span>{project.format}</span>
               <span aria-hidden="true">·</span>
@@ -88,7 +88,7 @@ export function DashboardView({
               <span aria-hidden="true">·</span>
               <span className="text-amber-400 font-medium">{project.status}</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight text-balance mb-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight text-balance mb-2 break-words">
               {project.title}
             </h2>
             <p className="text-sm text-zinc-300 max-w-2xl leading-relaxed mb-5">
@@ -116,9 +116,9 @@ export function DashboardView({
         </div>
 
         {/* Studio Summary & Direction Notes */}
-        <div className="lg:col-span-5 border border-white/10 bg-[#11131C] rounded-xl p-6 flex flex-col justify-between gap-6">
+        <div className="lg:col-span-5 border border-white/10 bg-[#11131C] rounded-xl p-5 sm:p-6 flex flex-col justify-between gap-6 min-w-0">
           <div>
-            <div className="flex items-center justify-between border-b border-white/10 pb-3 mb-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-3 mb-4">
               <h3 className="text-sm font-semibold text-zinc-100">
                 Direction artistique & Réalisation
               </h3>
@@ -147,7 +147,7 @@ export function DashboardView({
             </dl>
           </div>
 
-          <div className="pt-4 border-t border-white/10 flex items-center justify-between gap-3">
+          <div className="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
             <div className="text-xs text-zinc-400">
               <span>Dernière mise à jour : </span>
               <span className="text-zinc-200 tabular-nums">
@@ -168,37 +168,37 @@ export function DashboardView({
       </section>
 
       {/* 4-column KPI Strip */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 border border-white/10 bg-[#11131C] rounded-xl divide-y lg:divide-y-0 lg:divide-x divide-white/10">
-        <div className="p-5">
+      <section className="grid grid-cols-2 lg:grid-cols-4 border border-white/10 bg-[#11131C] rounded-xl divide-x divide-y lg:divide-y-0 divide-white/10 overflow-hidden">
+        <div className="p-4 sm:p-5 min-w-0">
           <p className="text-xs text-zinc-400 mb-1">Scènes écrites</p>
-          <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
+          <p className="text-xl sm:text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
             {stats.sceneCount}
           </p>
           <p className="text-xs text-zinc-500 mt-1 tabular-nums">
             {stats.validatedSceneCount} validées
           </p>
         </div>
-        <div className="p-5">
+        <div className="p-4 sm:p-5 min-w-0">
           <p className="text-xs text-zinc-400 mb-1">Plans découpés</p>
-          <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
+          <p className="text-xl sm:text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
             {stats.shotCount}
           </p>
           <p className="text-xs text-zinc-500 mt-1">
             Storyboard & Diaporama MP4
           </p>
         </div>
-        <div className="p-5">
+        <div className="p-4 sm:p-5 min-w-0">
           <p className="text-xs text-zinc-400 mb-1">Répliques & Personnages</p>
-          <p className="text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
+          <p className="text-xl sm:text-2xl font-semibold text-zinc-100 font-mono tabular-nums">
             {stats.dialogueCount}
           </p>
           <p className="text-xs text-zinc-500 mt-1 tabular-nums">
             {stats.characterCount} personnages actifs
           </p>
         </div>
-        <div className="p-5">
+        <div className="p-4 sm:p-5 min-w-0">
           <p className="text-xs text-zinc-400 mb-1">Durée estimée</p>
-          <p className="text-2xl font-semibold text-amber-400 font-mono tabular-nums">
+          <p className="text-xl sm:text-2xl font-semibold text-amber-400 font-mono tabular-nums">
             {formatDuration(stats.estimatedDurationSec)}
           </p>
           <p className="text-xs text-zinc-500 mt-1 tabular-nums">
@@ -210,9 +210,9 @@ export function DashboardView({
       {/* Two-Column Breakdown: Scene Table + API Connectors Status */}
       <section className="grid grid-cols-1 xl:grid-cols-12 gap-6">
         {/* Scene Table */}
-        <div className="xl:col-span-7 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <div>
+        <div className="xl:col-span-7 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden min-w-0">
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-white/10">
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-zinc-100">
                 Découpage du projet actif
               </h3>
@@ -248,33 +248,33 @@ export function DashboardView({
                 <thead>
                   <tr className="border-b border-white/10 text-xs text-zinc-400">
                     <th className="py-3 px-4 font-medium">Scène</th>
-                    <th className="py-3 px-4 font-medium">Statut</th>
+                    <th className="py-3 px-4 font-medium hidden sm:table-cell">Statut</th>
                     <th className="py-3 px-4 font-medium text-right">Plans</th>
-                    <th className="py-3 px-4 font-medium text-right">Durée</th>
+                    <th className="py-3 px-4 font-medium text-right hidden sm:table-cell">Durée</th>
                     <th className="py-3 px-4 font-medium text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5 text-sm">
                   {project.scenes.map((scene) => (
                     <tr key={scene.id} className="hover:bg-white/[0.03] transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="font-medium text-zinc-100">
+                      <td className="py-3 px-4 max-w-[180px] sm:max-w-md">
+                        <div className="font-medium text-zinc-100 truncate">
                           <span className="font-mono text-xs text-amber-400 mr-2 tabular-nums">
                             {String(scene.number).padStart(2, '0')}
                           </span>
                           {formatSceneHeading(scene)}
                         </div>
-                        <p className="text-xs text-zinc-400 truncate max-w-md mt-0.5">
+                        <p className="text-xs text-zinc-400 truncate mt-0.5">
                           {scene.synopsis}
                         </p>
                       </td>
-                      <td className="py-3 px-4 text-xs text-zinc-300 whitespace-nowrap">
+                      <td className="py-3 px-4 text-xs text-zinc-300 whitespace-nowrap hidden sm:table-cell">
                         {scene.status}
                       </td>
                       <td className="py-3 px-4 text-right font-mono text-xs text-zinc-300 tabular-nums">
                         {scene.shots.length}
                       </td>
-                      <td className="py-3 px-4 text-right font-mono text-xs text-zinc-300 tabular-nums">
+                      <td className="py-3 px-4 text-right font-mono text-xs text-zinc-300 tabular-nums hidden sm:table-cell">
                         {formatDuration(computeSceneDurationSec(scene))}
                       </td>
                       <td className="py-3 px-4 text-right whitespace-nowrap">
@@ -295,9 +295,9 @@ export function DashboardView({
         </div>
 
         {/* Pipeline Connectors Summary */}
-        <div className="xl:col-span-5 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-            <div>
+        <div className="xl:col-span-5 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden min-w-0">
+          <div className="flex items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-white/10">
+            <div className="min-w-0">
               <h3 className="text-base font-semibold text-zinc-100">
                 Pipeline Diaporama IA & FFmpeg
               </h3>

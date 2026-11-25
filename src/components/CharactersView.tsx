@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ImagePlus, Plus, Trash2, UserPlus } from 'lucide-react';
 import type { Character, CharacterRole, FilmProject, GeminiVoiceName } from '../types/film';
+import { fetchApiJson } from '../utils/apiClient';
 import { CinemaImage } from './CinemaImage';
 
 interface CharactersViewProps {
@@ -102,8 +103,9 @@ export function CharactersView({ project, onUpdateProject }: CharactersViewProps
 
     setGeneratingPortrait(true);
     setPortraitNotice(null);
-    try {
-      const res = await fetch('/api/connectors/gemini/generate-shot-image', {
+    const res = await fetchApiJson<{ imageUrl?: string; message?: string }>(
+      '/api/connectors/gemini/generate-shot-image',
+      {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -111,26 +113,25 @@ export function CharactersView({ project, onUpdateProject }: CharactersViewProps
           aspectRatio: '1:1',
           shotId: activeCharacter.id,
         }),
-      });
-      const data = await res.json();
-      if (!res.ok || !data.imageUrl) {
-        setPortraitNotice(
-          data.message || "Impossible de générer le portrait avec Gemini.",
-        );
-        return;
-      }
-      updateActiveCharacter((c) => ({ ...c, portraitUrl: data.imageUrl }));
-    } catch {
-      setPortraitNotice('Erreur de connexion au serveur studio.');
-    } finally {
+      },
+    );
+
+    if (!res.ok || !res.data?.imageUrl) {
+      setPortraitNotice(
+        res.errorMessage || 'Impossible de générer le portrait avec Gemini.',
+      );
       setGeneratingPortrait(false);
+      return;
     }
+
+    updateActiveCharacter((c) => ({ ...c, portraitUrl: res.data!.imageUrl }));
+    setGeneratingPortrait(false);
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start min-w-0">
       {/* Left Character Roster */}
-      <aside className="lg:col-span-4 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden">
+      <aside className="lg:col-span-4 border border-white/10 bg-[#11131C] rounded-xl overflow-hidden min-w-0">
         <div className="flex items-center justify-between px-4 py-3.5 border-b border-white/10">
           <h2 className="text-sm font-semibold text-zinc-100">
             Distribution ({project.characters.length})
@@ -200,7 +201,7 @@ export function CharactersView({ project, onUpdateProject }: CharactersViewProps
       </aside>
 
       {/* Right Character Detail Editor */}
-      <div className="lg:col-span-8">
+      <div className="lg:col-span-8 min-w-0">
         {!activeCharacter ? (
           <div className="border border-white/10 bg-[#11131C] rounded-xl p-10 text-center">
             <p className="text-sm text-zinc-400">
